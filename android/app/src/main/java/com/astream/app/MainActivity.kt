@@ -10,10 +10,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
+import org.java_websocket.client.WebSocketClient
+import org.java_websocket.handshake.ServerHandshake
 import org.webrtc.*
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.net.URI
 
 class MainActivity : AppCompatActivity() {
     private val TAG = "AStream"
@@ -28,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private var audioSource: AudioSource? = null
     private var localAudioTrack: AudioTrack? = null
     private var pcIpAddress: String = ""
+    private var webSocketClient: WebSocketClient? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +64,7 @@ class MainActivity : AppCompatActivity() {
 
         peerConnectionFactory = PeerConnectionFactory.builder()
             .setOptions(PeerConnectionFactory.Options())
+            .createAudioDeviceModule(this)
             .build()
 
         Log.d(TAG, "WebRTC initialized")
@@ -97,12 +102,9 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, "Discovery response: $msg")
 
                     if (msg.startsWith("ASTREAM_RESPONSE")) {
-                        val parts = msg.split(" ")
-                        if (parts.size >= 3) {
-                            pcIpAddress = response.address.hostAddress
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(this@MainActivity, "Found PC: $pcIpAddress", Toast.LENGTH_SHORT).show()
-                            }
+                        pcIpAddress = response.address.hostAddress
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "Found PC: $pcIpAddress", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } catch (e: Exception) {
@@ -117,9 +119,75 @@ class MainActivity : AppCompatActivity() {
 
     private fun connectToPC() {
         Log.d(TAG, "Connecting to PC at $pcIpAddress:8080")
-        // TODO: Implement WebSocket connection to signaling server
-        // TODO: Create WebRTC peer connection
         Toast.makeText(this, "Connecting to $pcIpAddress...", Toast.LENGTH_SHORT).show()
+
+        val wsUri = URI("ws://$pcIpAddress:8080")
+        webSocketClient = object : WebSocketClient(wsUri) {
+            override fun onOpen(handshakedata: ServerHandshake?) {
+                Log.d(TAG, "WebSocket connected")
+                createOffer()
+            }
+
+            override fun onMessage(message: String?) {
+                Log.d(TAG, "Received: $message")
+                message?.let { handleSignalingMessage(it) }
+            }
+
+            override fun onClose(code: Int, reason: String?, remote: Boolean) {
+                Log.d(TAG, "WebSocket closed: $reason")
+            }
+
+            override fun onError(ex: Exception?) {
+                Log.e(TAG, "WebSocket error: ${ex?.message}")
+            }
+        }
+        webSocketClient?.connect()
+    }
+
+    private fun createOffer() {
+        val iceServers = listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
+        val config = PeerConnection.RTCConfiguration(iceServers)
+
+        peerConnection = peerConnectionFactory?.createPeerConnection(config, object : PeerConnection.Observer {
+            override fun onIceCandidate(p0: IceCandidate?) {
+                p0?.let {
+                    val msg = "{ \"type\": \"IceCandidate\", \"candidate\": \"${it.sdp}\", \"sdpMid\": \"${it.sdpMid}\", \"sdpMLineIndex\": ${it.sdpMLineIndex} }"
+                    webSocketClient?.send(msg)
+                }
+            }
+
+            override fun onAddStream(p0: MediaStream?) {}
+            override fun onDataChannel(p0: DataChannel?) {}
+            override fun onIceConnectionChange(p0: PeerConnection.IceConnectionState?) {}
+            override fun onIceGatheringChange(p0: PeerConnection.IceGatheringState?) {}
+            override fun onRemoveStream(p0: MediaStream?) {}
+            override fun onRenegotiationNeeded() {}
+            override fun onSignalingChange(p0: PeerConnection.SignalingState?) {}
+            override fun onTrack(p0: RtpTransceiver?) {}
+        })
+
+        val audioConstraints = MediaConstraints()
+        audioSource = peerConnectionFactory?.createAudioSource(audioConstraints)
+        localAudioTrack = peerConnectionFactory?.createAudioTrack("audio0", audioSource)
+        peerConnection?.addTrack(localAudioTrack)
+
+        peerConnection?.createOffer(object : SdpObserver {
+            override fun onCreateSuccess(p0: SessionDescription?) {
+                p0?.let {
+                    peerConnection?.setLocalDescription(this, it)
+                    val msg = "{ \"type\": \"Offer\", \"sdp\": \"${it.description}\" }"
+                    webSocketClient?.send(msg)
+                }
+            }
+            override fun onSetSuccess() {}
+            override fun onCreateFailure(p0: String?) {}
+            override fun onSetFailure(p0: String?) {}
+        }, MediaConstraints())
+    }
+
+    private fun handleSignalingMessage(message: String) {
+        // TODO: Parse and handle SDP answer, ICE candidates
+        Log.d(TAG, "Handling signaling message")
     }
 
     override fun onRequestPermissionsResult(
@@ -141,6 +209,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        webSocketClient?.close()
         peerConnection?.dispose()
         peerConnectionFactory?.dispose()
     }
