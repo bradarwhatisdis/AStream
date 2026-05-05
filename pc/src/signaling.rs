@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 use futures_util::stream::StreamExt;
+use futures_util::sink::SinkExt;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
