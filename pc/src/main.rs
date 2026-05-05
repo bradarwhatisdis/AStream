@@ -2,6 +2,7 @@ mod signaling;
 mod audio;
 mod webrtc_handler;
 
+use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
 #[tokio::main]
@@ -9,23 +10,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("AStream PC v0.1.0 - Starting...");
 
     let audio_config = audio::AudioConfig::default();
-    println!("Audio config: {:?}Hz, {} channels, buffer: {} samples", 
-             audio_config.sample_rate, audio_config.channels, audio_config.buffer_size);
+    println!("Audio config: {:?}", audio_config);
 
     let input_device = audio::get_default_input_device();
     let output_device = audio::get_default_output_device();
 
-    match (&input_device, &output_device) {
-        (Some(in_dev), Some(out_dev)) => {
-            println!("Input: {}", in_dev);
-            println!("Output: {}", out_dev);
-        }
-        _ => println!("Warning: Could not find default audio devices"),
-    }
+    println!("Input: {:?}", input_device);
+    println!("Output: {:?}", output_device);
+
+    let signaling_state = Arc::new(signaling::SignalingState::new());
 
     println!("Starting signaling server...");
-    tokio::spawn(async {
-        if let Err(e) = signaling::start_signaling_server("0.0.0.0:8080").await {
+    let state_clone = signaling_state.clone();
+    tokio::spawn(async move {
+        if let Err(e) = signaling::start_signaling_server("0.0.0.0:8080", state_clone).await {
             eprintln!("Signaling server error: {}", e);
         }
     });
