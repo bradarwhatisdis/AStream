@@ -1,6 +1,7 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{BufferSize, SampleFormat, StreamConfig};
 
+#[derive(Debug)]
 pub struct AudioConfig {
     pub sample_rate: u32,
     pub channels: u16,
