@@ -1,9 +1,10 @@
 mod signaling;
 mod audio;
 mod webrtc_handler;
+mod discovery;
 
 use signaling::SignalingState;
-use webrtc_handler::WebRTCManager;
+use discovery::DeviceInfo;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
@@ -11,10 +12,7 @@ use tokio::time::{sleep, Duration};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("AStream PC v0.1.0 - Starting...");
 
-    let audio_config = audio::AudioConfig::default();
-    println!("Audio config: {:?}", audio_config);
-
-    let _webrtc_manager = WebRTCManager::new();
+    let _webrtc_manager = webrtc_handler::WebRTCManager::new();
     let signaling_state = Arc::new(SignalingState::new());
 
     println!("Starting signaling server...");
@@ -25,12 +23,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    println!("AStream PC ready. Signaling on ws://0.0.0.0:8080");
+    println!("Starting device discovery...");
+    let device_info = DeviceInfo::default();
+    tokio::spawn(async move {
+        if let Err(e) = discovery::start_discovery_server(device_info).await {
+            eprintln!("Discovery server error: {}", e);
+        }
+    });
+
+    println!("AStream PC ready.");
+    println!("Signaling: ws://0.0.0.0:8080");
     println!("Waiting for connections...");
 
-    // Main loop - handle signaling messages and WebRTC
     loop {
         sleep(Duration::from_secs(1)).await;
-        // TODO: Process signaling messages and update WebRTC state
     }
 }
