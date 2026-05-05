@@ -71,7 +71,8 @@ impl WebRTCManager {
 
         // Handle incoming audio track (from Android)
         peer_connection.on_track(Box::new(|track, _, _| {
-            println!("Received track: {}", track.codec().name);
+            let codec = track.codec();
+            println!("Received track: {:?}", codec);
             Box::pin(async {})
         }));
 
