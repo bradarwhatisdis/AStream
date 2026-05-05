@@ -17,8 +17,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match (&input_device, &output_device) {
         (Some(in_dev), Some(out_dev)) => {
-            println!("Input: {}", in_dev.name().unwrap_or_default());
-            println!("Output: {}", out_dev.name().unwrap_or_default());
+            println!("Input: {}", in_dev);
+            println!("Output: {}", out_dev);
         }
         _ => println!("Warning: Could not find default audio devices"),
     }

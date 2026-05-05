@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
-use tokio_tungstenite::accept_async;
-use tungstenite::Message;
+use tokio_tungstenite::{accept_async, tungstenite::Message};
+use futures_util::stream::StreamExt;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SignalMessage {
