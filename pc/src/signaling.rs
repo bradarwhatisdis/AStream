@@ -80,22 +80,25 @@ pub async fn start_signaling_server(addr: &str, state: Arc<SignalingState>) -> R
                 });
 
                 // Read messages from WebSocket
-                let state_inner = state_clone.clone();
-                let read_task = tokio::spawn(async move {
-                    while let Some(Ok(msg)) = read.next().await {
-                        if let Message::Text(text) = msg {
-                            if let Ok(signal) = serde_json::from_str::<SignalMessage>(&text) {
-                                match signal {
-                                    SignalMessage::Heartbeat => {},
-                                    _ => {
-                                        println!("Signal from {}: {:?}", peer_id, signal);
-                                        state_inner.broadcast(signal);
+                let read_task = tokio::spawn({
+                    let state_inner = state_clone.clone();
+                    let peer_id = peer_id.clone();
+                    async move {
+                        while let Some(Ok(msg)) = read.next().await {
+                            if let Message::Text(text) = msg {
+                                if let Ok(signal) = serde_json::from_str::<SignalMessage>(&text) {
+                                    match signal {
+                                        SignalMessage::Heartbeat => {},
+                                        _ => {
+                                            println!("Signal from {}: {:?}", peer_id, signal);
+                                            state_inner.broadcast(signal);
+                                        }
                                     }
                                 }
                             }
                         }
+                        println!("Read task ended for {}", peer_id);
                     }
-                    println!("Read task ended for {}", peer_id);
                 });
 
                 // Wait for either task to finish
