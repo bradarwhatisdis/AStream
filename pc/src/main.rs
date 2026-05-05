@@ -2,7 +2,7 @@ mod signaling;
 mod audio;
 mod webrtc_handler;
 
-use signaling::{SignalMessage, SignalingState};
+use signaling::SignalingState;
 use webrtc_handler::WebRTCManager;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let audio_config = audio::AudioConfig::default();
     println!("Audio config: {:?}", audio_config);
 
-    let mut webrtc_manager = WebRTCManager::new();
+    let _webrtc_manager = WebRTCManager::new();
     let signaling_state = Arc::new(SignalingState::new());
 
     println!("Starting signaling server...");
