@@ -105,7 +105,7 @@ pub async fn start_signaling_server(addr: &str, state: Arc<SignalingState>) -> R
                     _ = read_task => {},
                 }
 
-                state_inner.remove_peer(&peer_id);
+                state_clone.remove_peer(&peer_id);
                 println!("Peer disconnected: {}", peer_id);
             }
         });
