@@ -2,6 +2,8 @@ mod signaling;
 mod audio;
 mod webrtc_handler;
 
+use signaling::{SignalMessage, SignalingState};
+use webrtc_handler::WebRTCManager;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
@@ -12,13 +14,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let audio_config = audio::AudioConfig::default();
     println!("Audio config: {:?}", audio_config);
 
-    let input_device = audio::get_default_input_device();
-    let output_device = audio::get_default_output_device();
-
-    println!("Input: {:?}", input_device);
-    println!("Output: {:?}", output_device);
-
-    let signaling_state = Arc::new(signaling::SignalingState::new());
+    let mut webrtc_manager = WebRTCManager::new();
+    let signaling_state = Arc::new(SignalingState::new());
 
     println!("Starting signaling server...");
     let state_clone = signaling_state.clone();
@@ -31,7 +28,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("AStream PC ready. Signaling on ws://0.0.0.0:8080");
     println!("Waiting for connections...");
 
+    // Main loop - handle signaling messages and WebRTC
     loop {
         sleep(Duration::from_secs(1)).await;
+        // TODO: Process signaling messages and update WebRTC state
     }
 }
