@@ -5,9 +5,6 @@ use webrtc::interceptor::registry::Registry;
 use webrtc::peer_connection::configuration::RTCConfiguration;
 use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::RTCPeerConnection;
-use webrtc::track::track_local::track_local_static_sample::TrackLocalStaticSample;
-use webrtc::track::track_local::TrackLocal;
-use webrtc::rtp_transceiver::rtp_codec::RTCRtpCodecCapability;
 use tokio::sync::mpsc;
 
 pub struct WebRTCManager {
@@ -62,7 +59,7 @@ impl WebRTCManager {
 
         let peer_connection = api.new_peer_connection(config).await?;
 
-        let (audio_tx, mut audio_rx) = mpsc::unbounded_channel::<Vec<u8>>();
+        let (audio_tx, _audio_rx) = mpsc::unbounded_channel::<Vec<u8>>();
 
         peer_connection.on_peer_connection_state_change(Box::new(|state: RTCPeerConnectionState| {
             println!("Peer Connection State: {}", state);
