@@ -16,7 +16,6 @@ pub enum SignalMessage {
 }
 
 pub type SignalSender = tokio::sync::mpsc::UnboundedSender<Message>;
-pub type SignalReceiver = tokio::sync::mpsc::UnboundedReceiver<Message>;
 
 pub struct SignalingState {
     pub peers: Arc<Mutex<HashMap<String, SignalSender>>>,
